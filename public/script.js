@@ -1,11 +1,32 @@
+// Auth Toggle Support
+const loginBtn = document.getElementById('login-btn');
+const signupBtn = document.getElementById('signup-btn');
+const toggleAuth = document.getElementById('toggle-auth');
+const formTitle = document.getElementById('form-title');
+const errorElement = document.getElementById('error');
+
+let isSignup = false;
+
+if (toggleAuth) {
+  toggleAuth.addEventListener('click', () => {
+    isSignup = !isSignup;
+    formTitle.textContent = isSignup ? 'Signup' : 'Login';
+    loginBtn.style.display = isSignup ? 'none' : 'inline-block';
+    signupBtn.style.display = isSignup ? 'inline-block' : 'none';
+    toggleAuth.textContent = isSignup ? 'Switch to Login' : 'Switch to Signup';
+    document.getElementById('toggle-text').textContent = isSignup
+      ? 'Already have an account?'
+      : "Don't have an account?";
+    errorElement.textContent = '';
+  });
+}
+
 // Login Functionality
-if (document.getElementById('login-btn')) {
-  document.getElementById('login-btn').addEventListener('click', async () => {
+if (loginBtn) {
+  loginBtn.addEventListener('click', async () => {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
-    const errorElement = document.getElementById('error');
 
-    // Clear previous errors
     errorElement.textContent = '';
 
     if (!username || !password) {
@@ -39,9 +60,40 @@ if (document.getElementById('login-btn')) {
   });
 }
 
+// Signup Functionality
+if (signupBtn) {
+  signupBtn.addEventListener('click', async () => {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    errorElement.textContent = '';
+
+    if (!username || !password) {
+      errorElement.textContent = 'Please enter both username and password';
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        errorElement.textContent = '✅ Signup successful! You can now login.';
+        toggleAuth.click();
+      } else {
+        errorElement.textContent = data.error || 'Signup failed';
+      }
+    } catch (err) {
+      errorElement.textContent = '❌ Network error during signup';
+    }
+  });
+}
+
 // Chat Page Functionality
 if (document.getElementById('send-btn')) {
-  // Enter key support
   document.getElementById('message-input').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -49,17 +101,15 @@ if (document.getElementById('send-btn')) {
     }
   });
 
-  // Send message
   document.getElementById('send-btn').addEventListener('click', sendMessage);
 
-  // Logout functionality
   document.getElementById('logout-btn').addEventListener('click', async () => {
     try {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include'
       });
-      
+
       if (response.ok) {
         window.location.href = 'index.html';
       } else {
@@ -71,34 +121,42 @@ if (document.getElementById('send-btn')) {
     }
   });
 
-  // Initial bot message
+  const resetBtn = document.getElementById('reset-chat-btn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      document.getElementById('chat-area').innerHTML = '';
+      document.getElementById('products-display').innerHTML = '';
+      displayMessage("Chat reset. How can I help you now?", 'bot');
+    });
+  }
+
   displayMessage("Hello! How can I help you today? Try 'search jeans' or click products below.", 'bot');
 }
 
 // Shared Functions
 
-/**
- * Displays a message in the chat area
- * @param {string} text - The message text
- * @param {string} sender - 'user' or 'bot' or 'bot success' or 'bot error'
- */
 function displayMessage(text, sender) {
   const chatArea = document.getElementById('chat-area');
   const msgDiv = document.createElement('div');
   msgDiv.className = `msg ${sender}`;
-  msgDiv.textContent = text;
+
+  const timestamp = new Date().toLocaleTimeString();
+  msgDiv.innerHTML = `<span>${text}</span><br><small>${timestamp}</small>`;
+
   chatArea.appendChild(msgDiv);
   chatArea.scrollTop = chatArea.scrollHeight;
 }
 
-/**
- * Displays products in the products display area
- * @param {Array} products - Array of product objects
- */
 function displayProducts(products) {
   const container = document.getElementById('products-display');
+
+  if (!products.length) {
+    container.innerHTML = '<p>No products found. Try another search.</p>';
+    return;
+  }
+
   container.innerHTML = products.map(product => `
-    <div class="product">
+    <div class="product-preview">
       <h3>${product.name}</h3>
       <p>$${product.price.toFixed(2)}</p>
       ${product.description ? `<p>${product.description}</p>` : ''}
@@ -111,33 +169,25 @@ function displayProducts(products) {
     </div>
   `).join('');
 
-  // Add event listeners to all buy buttons
   document.querySelectorAll('.buy-btn').forEach(btn => {
     btn.addEventListener('click', handleBuyClick);
   });
 }
 
-/**
- * Handles the buy button click event
- * @param {Event} event - The click event
- */
 async function handleBuyClick(event) {
   const btn = event.currentTarget;
   const productId = parseInt(btn.dataset.id);
   const productName = btn.dataset.name;
 
-  // Validate product ID
-  if (!productId || isNaN(parseInt(productId))) {
+  if (!productId || isNaN(productId)) {
     displayMessage('❌ Invalid product selection', 'bot error');
     return;
   }
 
-  // Disable button during processing
   btn.disabled = true;
   const originalText = btn.textContent;
   btn.textContent = 'Processing...';
 
-  // Show purchase attempt in chat
   displayMessage(`Buying ${productName}...`, 'user');
 
   try {
@@ -145,7 +195,7 @@ async function handleBuyClick(event) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ productId: parseInt(productId) }) // Ensure proper type
+      body: JSON.stringify({ productId })
     });
 
     const data = await response.json();
@@ -162,22 +212,17 @@ async function handleBuyClick(event) {
     displayMessage(`❌ ${err.message || 'Purchase failed. Please try again.'}`, 'bot error');
     console.error('Purchase error:', err);
   } finally {
-    // Re-enable button
     btn.disabled = false;
     btn.textContent = originalText;
   }
 }
 
-/**
- * Sends a chat message to the server
- */
 async function sendMessage() {
   const inputElement = document.getElementById('message-input');
   const message = inputElement.value.trim();
 
   if (!message) return;
 
-  // Display user message
   displayMessage(message, 'user');
   inputElement.value = '';
 

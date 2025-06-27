@@ -1,21 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Chat</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
     <h1>Welcome, <span id="username">User</span>!</h1>
+    
     <div id="chat-area"></div>
+
+    <!-- ✅ Product results -->
+    <div id="products-display"></div>
+
     <div class="controls">
-      <input type="text" id="message-input" placeholder="Type your message...">
+      <input type="text" id="message-input" placeholder="Type your message..." />
       <button id="send-btn">Send</button>
+      <button id="reset-chat-btn">Reset Chat</button>
       <button id="logout-btn">Logout</button>
     </div>
-    <div id="products-display"></div>
   </div>
   <script src="script.js"></script>
 </body>

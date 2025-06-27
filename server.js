@@ -10,8 +10,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Database Connection with improved error handling
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce-chatbot', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
   serverSelectionTimeoutMS: 5000
 })
 .then(() => console.log('✅ Connected to MongoDB'))
@@ -77,7 +75,29 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Routes with improved error handling
+// ✨ Signup Route (New)
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password)
+      return res.status(400).json({ error: 'Username and password are required' });
+
+    const existingUser = await User.findOne({ username });
+    if (existingUser)
+      return res.status(409).json({ error: 'Username already exists' });
+
+    const newUser = new User({ username, password });
+    await newUser.save();
+
+    res.status(201).json({ success: true, message: 'Signup successful' });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Login Route
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -110,6 +130,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Chat Route
 app.post('/api/chat', async (req, res) => {
   try {
     const token = req.cookies.token;
@@ -147,6 +168,7 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// Purchase Route
 app.post('/api/purchase', async (req, res) => {
   try {
     const token = req.cookies.token;
@@ -155,7 +177,6 @@ app.post('/api/purchase', async (req, res) => {
     jwt.verify(token, JWT_SECRET, async (err, decoded) => {
       if (err) return res.status(403).json({ error: 'Invalid token' });
 
-      // Add proper validation
       const productId = parseInt(req.body.productId);
       if (isNaN(productId)) {
         return res.status(400).json({ 
@@ -187,7 +208,13 @@ app.post('/api/purchase', async (req, res) => {
   }
 });
 
-// Error handling middleware
+// Logout Route (keep for now)
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('token');
+  res.status(200).json({ success: true, message: 'Logged out' });
+});
+
+// Error Handling
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Something went wrong' });
@@ -196,8 +223,10 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📚 API Documentation:`);
-  console.log(`- POST /api/auth/login (username, password)`);
-  console.log(`- POST /api/chat (message)`);
-  console.log(`- POST /api/purchase (productId)`);
+  console.log(`📚 API Routes:
+  - POST /api/auth/signup
+  - POST /api/auth/login
+  - POST /api/auth/logout
+  - POST /api/chat
+  - POST /api/purchase`);
 });
