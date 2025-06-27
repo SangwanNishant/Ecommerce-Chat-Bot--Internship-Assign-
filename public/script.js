@@ -130,7 +130,7 @@ if (document.getElementById('send-btn')) {
     });
   }
 
-  displayMessage("Hello! How can I help you today? Try 'search jeans' or click products below.", 'bot');
+  displayMessage("Hello! How can I help you today? Try 'search jean' or click products below.", 'bot');
 }
 
 // Shared Functions
